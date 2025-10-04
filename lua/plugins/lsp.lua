@@ -255,7 +255,7 @@ return {
       max_width = 100,
       max_height = 25,
       wrap = true,
-      focusable = true,
+      focusable = false,  -- Prevent focusing/editing the documentation window
       close_events = { "BufLeave", "CursorMoved", "InsertEnter" },
       -- Custom styling
       style = "minimal",
@@ -274,6 +274,31 @@ return {
       trigger_chars = { "(", ",", " " },
     })
 
+    -- Override signature help to add safety checks
+    local original_signature_help = vim.lsp.buf.signature_help
+    vim.lsp.buf.signature_help = function()
+      -- Check if any LSP client supports signature help for this buffer
+      local clients = vim.lsp.get_clients({ bufnr = 0 })
+      local has_signature_help = false
+      
+      for _, client in pairs(clients) do
+        if client.server_capabilities.signatureHelpProvider then
+          has_signature_help = true
+          break
+        end
+      end
+      
+      if has_signature_help then
+        local buftype = vim.api.nvim_buf_get_option(0, "buftype")
+        local filetype = vim.api.nvim_buf_get_option(0, "filetype")
+        
+        -- Only call signature help for regular files, not special buffers
+        if buftype == "" and not vim.tbl_contains({ "copilot-chat", "chatgpt", "help", "terminal" }, filetype) then
+          original_signature_help()
+        end
+      end
+    end
+
     -- Enhanced completion documentation
     vim.lsp.handlers["textDocument/completion"] = vim.lsp.with(vim.lsp.handlers.completion, {
       documentation = {
@@ -284,28 +309,82 @@ return {
       },
     })
 
-    -- Auto-show signature help when typing function parameters
+    -- Auto-show signature help when typing function parameters (only for LSP-enabled buffers)
     vim.api.nvim_create_autocmd({ "CursorHoldI" }, {
       group = vim.api.nvim_create_augroup("lsp_signature_help", { clear = true }),
       callback = function()
-        if not require("cmp").visible() then
-          vim.lsp.buf.signature_help()
+        -- Check if current buffer has LSP clients that support signature help
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        local has_signature_help = false
+        
+        for _, client in pairs(clients) do
+          if client.server_capabilities.signatureHelpProvider then
+            has_signature_help = true
+            break
+          end
+        end
+        
+        -- Only trigger signature help if supported and completion menu is not visible
+        if has_signature_help and not require("cmp").visible() then
+          -- Additional check for valid buffer types
+          local buftype = vim.api.nvim_buf_get_option(0, "buftype")
+          local filetype = vim.api.nvim_buf_get_option(0, "filetype")
+          
+          -- Skip for special buffer types and chat interfaces
+          if buftype == "" and not vim.tbl_contains({ "copilot-chat", "chatgpt", "help", "terminal" }, filetype) then
+            vim.lsp.buf.signature_help()
+          end
         end
       end,
     })
 
-    -- Show hover documentation automatically after a delay
+    -- Show hover documentation automatically after a delay (only for LSP-enabled buffers)
     vim.api.nvim_create_autocmd({ "CursorHold" }, {
       group = vim.api.nvim_create_augroup("lsp_hover", { clear = true }),
       callback = function()
-        local opts = {
-          focusable = false,
-          close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
-          border = "rounded",
-          source = "always",
-          prefix = " ",
-        }
-        vim.diagnostic.open_float(nil, opts)
+        -- Check if current buffer has LSP clients that support hover
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        local has_hover = false
+        
+        for _, client in pairs(clients) do
+          if client.server_capabilities.hoverProvider then
+            has_hover = true
+            break
+          end
+        end
+        
+        -- Only trigger hover if supported
+        if has_hover then
+          local buftype = vim.api.nvim_buf_get_option(0, "buftype")
+          local filetype = vim.api.nvim_buf_get_option(0, "filetype")
+          
+          -- Skip for special buffer types and chat interfaces
+          if buftype == "" and not vim.tbl_contains({ "copilot-chat", "chatgpt", "help", "terminal" }, filetype) then
+            -- Show hover documentation for the symbol under cursor
+            vim.lsp.buf.hover()
+          end
+        end
+      end,
+    })
+
+    -- Enhanced diagnostic display
+    vim.api.nvim_create_autocmd({ "CursorHold" }, {
+      group = vim.api.nvim_create_augroup("lsp_diagnostics", { clear = true }),
+      callback = function()
+        local buftype = vim.api.nvim_buf_get_option(0, "buftype")
+        local filetype = vim.api.nvim_buf_get_option(0, "filetype")
+        
+        -- Skip for special buffer types and chat interfaces
+        if buftype == "" and not vim.tbl_contains({ "copilot-chat", "chatgpt", "help", "terminal" }, filetype) then
+          local opts = {
+            focusable = false,
+            close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
+            border = "rounded",
+            source = "always",
+            prefix = " ",
+          }
+          vim.diagnostic.open_float(nil, opts)
+        end
       end,
     })
 
