@@ -41,11 +41,23 @@ return {
     local on_attach = function(client, bufnr)
       local opts = { buffer = bufnr }
       
+      -- Enhanced go-to-definition mappings using Telescope
+      vim.keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<cr>", { buffer = bufnr, desc = "Go to definition (Telescope)" })
       vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = bufnr, desc = "Go to declaration" })
-      vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr, desc = "Go to definition" })
+      vim.keymap.set("n", "gi", "<cmd>Telescope lsp_implementations<cr>", { buffer = bufnr, desc = "Go to implementation (Telescope)" })
+      vim.keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<cr>", { buffer = bufnr, desc = "Go to type definition (Telescope)" })
+      vim.keymap.set("n", "gr", "<cmd>Telescope lsp_references<cr>", { buffer = bufnr, desc = "Show references (Telescope)" })
       vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover documentation" })
-      vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = bufnr, desc = "Go to implementation" })
-      vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = bufnr, desc = "Go to references" })
+      
+      -- TypeScript specific keybindings
+      if client.name == "ts_ls" then
+        vim.keymap.set("n", "<leader>oi", function()
+          vim.lsp.buf.execute_command({
+            command = "_typescript.organizeImports",
+            arguments = { vim.api.nvim_buf_get_name(0) },
+          })
+        end, { buffer = bufnr, desc = "Organize imports" })
+      end
       
       -- Rename with multiple keybindings (F2, leader+rn, leader+CR)
       vim.keymap.set("n", "<F2>", vim.lsp.buf.rename, { buffer = bufnr, desc = "Rename symbol" })
@@ -124,6 +136,29 @@ return {
           end,
         })
       end,
+      settings = {
+        typescript = {
+          preferences = {
+            includePackageJsonAutoImports = "auto",
+          },
+        },
+        javascript = {
+          preferences = {
+            includePackageJsonAutoImports = "auto",
+          },
+        },
+      },
+      commands = {
+        OrganizeImports = {
+          function()
+            vim.lsp.buf.execute_command({
+              command = "_typescript.organizeImports",
+              arguments = { vim.api.nvim_buf_get_name(0) },
+            })
+          end,
+          description = "Organize Imports",
+        },
+      },
     })
 
     -- Docker

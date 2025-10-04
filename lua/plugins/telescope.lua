@@ -17,6 +17,13 @@ return {
     { "<leader>fc", "<cmd>Telescope git_commits<cr>", desc = "Git commits" },
     { "<leader>fs", "<cmd>Telescope git_status<cr>", desc = "Git status" },
     { "<leader>fw", "<cmd>Telescope current_buffer_fuzzy_find<cr>", desc = "Find in current buffer" },
+    -- LSP-related keybindings
+    { "<leader>ld", "<cmd>Telescope lsp_definitions<cr>", desc = "LSP definitions" },
+    { "<leader>lr", "<cmd>Telescope lsp_references<cr>", desc = "LSP references" },
+    { "<leader>li", "<cmd>Telescope lsp_implementations<cr>", desc = "LSP implementations" },
+    { "<leader>lt", "<cmd>Telescope lsp_type_definitions<cr>", desc = "LSP type definitions" },
+    { "<leader>ls", "<cmd>Telescope lsp_document_symbols<cr>", desc = "Document symbols" },
+    { "<leader>lw", "<cmd>Telescope lsp_workspace_symbols<cr>", desc = "Workspace symbols" },
   },
   config = function()
     local telescope = require("telescope")
@@ -71,6 +78,18 @@ return {
         grep_string = {
           -- Use vim previewer instead of treesitter to avoid ft_to_lang error
           previewer = false,
+        },
+        lsp_definitions = {
+          theme = "cursor",
+          initial_mode = "normal",
+        },
+        lsp_references = {
+          theme = "cursor",
+          initial_mode = "normal",
+        },
+        lsp_implementations = {
+          theme = "cursor",
+          initial_mode = "normal",
         },
       },
     })
