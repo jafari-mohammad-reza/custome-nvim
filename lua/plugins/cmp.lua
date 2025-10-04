@@ -23,11 +23,90 @@ return {
           luasnip.lsp_expand(args.body)
         end,
       },
+      -- Enhanced window configuration for fresher look
+      window = {
+        completion = {
+          border = "rounded",
+          scrollbar = true,
+          col_offset = -3,
+          side_padding = 1,
+          winhighlight = "Normal:CmpPmenu,FloatBorder:CmpBorder,CursorLine:PmenuSel,Search:None",
+        },
+        documentation = {
+          border = "rounded",
+          scrollbar = true,
+          max_width = 80,
+          max_height = 20,
+          winhighlight = "Normal:CmpDoc,FloatBorder:CmpDocBorder",
+        },
+      },
+      -- Enhanced formatting for better documentation display
+      formatting = {
+        expandable_indicator = true,
+        fields = { "kind", "abbr", "menu" },
+        format = function(entry, vim_item)
+          -- Add icons for different completion sources
+          local icons = {
+            Text = "󰉿",
+            Method = "󰆧",
+            Function = "󰊕",
+            Constructor = "",
+            Field = "󰜢",
+            Variable = "󰀫",
+            Class = "󰠱",
+            Interface = "",
+            Module = "",
+            Property = "󰜢",
+            Unit = "󰑭",
+            Value = "󰎠",
+            Enum = "",
+            Keyword = "󰌋",
+            Snippet = "",
+            Color = "󰏘",
+            File = "󰈙",
+            Reference = "󰈇",
+            Folder = "󰉋",
+            EnumMember = "",
+            Constant = "󰏿",
+            Struct = "󰙅",
+            Event = "",
+            Operator = "󰆕",
+            TypeParameter = "",
+          }
+          
+          vim_item.kind = string.format('%s %s', icons[vim_item.kind] or "", vim_item.kind)
+          vim_item.menu = ({
+            nvim_lsp = "[LSP]",
+            luasnip = "[Snippet]",
+            buffer = "[Buffer]",
+            path = "[Path]",
+            copilot = "[Copilot]",
+          })[entry.source.name]
+          
+          return vim_item
+        end,
+      },
       -- Performance settings
       performance = {
-        debounce = 100,
-        throttle = 50,
-        fetching_timeout = 200,
+        debounce = 60,
+        throttle = 30,
+        fetching_timeout = 500,
+        confirm_resolve_timeout = 80,
+        async_budget = 1,
+        max_view_entries = 200,
+      },
+      -- Enhanced documentation view
+      view = {
+        entries = { name = 'custom', selection_order = 'near_cursor' },
+        docs = {
+          auto_open = true,
+        },
+      },
+      -- Experimental features for better UX
+      experimental = {
+        ghost_text = {
+          hl_group = "CmpGhostText",
+        },
       },
       mapping = cmp.mapping.preset.insert({
         ["<C-b>"] = cmp.mapping.scroll_docs(-4),

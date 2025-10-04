@@ -32,12 +32,17 @@ return {
     telescope.setup({
       defaults = {
         -- Centered floating window layout
-        layout_strategy = "center",
+        layout_strategy = "flex",
         layout_config = {
-          center = {
-            height = 0.5,
-            width = 0.7,
-            preview_cutoff = 40,
+          horizontal = {
+            width = 0.9,
+            height = 0.8,
+            preview_width = 0.6,
+          },
+          vertical = {
+            width = 0.9,
+            height = 0.9,
+            preview_height = 0.6,
           },
         },
         borderchars = {
@@ -45,6 +50,66 @@ return {
           results = { "─", "│", "─", "│", "╭", "╮", "┤", "├" },
           preview = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
         },
+        -- Configure preview window
+        preview = {
+          hide_on_startup = false,
+          treesitter = false, -- Disable treesitter to avoid ft_to_lang errors
+        },
+        -- Global safe buffer previewer to prevent ft_to_lang errors
+        buffer_previewer_maker = function(filepath, bufnr, opts)
+          opts = opts or {}
+          
+          -- Safely read file content
+          local ok, content = pcall(vim.fn.readfile, filepath)
+          if not ok or not content then
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Error reading file: " .. filepath })
+            return
+          end
+          
+          -- Check if this is a grep result by looking for line number in the entry
+          local preview_content = content
+          local line_num = nil
+          
+          -- Try to extract line number from the telescope entry
+          if opts.entry and opts.entry.lnum then
+            line_num = tonumber(opts.entry.lnum)
+          elseif opts.entry and opts.entry.row then
+            line_num = tonumber(opts.entry.row)
+          end
+          
+          -- If we have a line number (from grep), show context around it
+          if line_num and line_num > 0 then
+            local context_lines = 5
+            local start_line = math.max(1, line_num - context_lines)
+            local end_line = math.min(#content, line_num + context_lines)
+            
+            preview_content = {}
+            -- Show context with line numbers and highlight the matched line
+            for i = start_line, end_line do
+              local line = content[i] or ""
+              local prefix = (i == line_num) and ">>> " or "    "
+              table.insert(preview_content, string.format("%s%4d: %s", prefix, i, line))
+            end
+            
+            -- Set the cursor to the matched line in the preview
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, preview_content)
+            vim.schedule(function()
+              local match_line_in_preview = line_num - start_line + 1
+              if vim.api.nvim_buf_is_valid(bufnr) then
+                vim.api.nvim_win_set_cursor(0, {match_line_in_preview, 0})
+              end
+            end)
+          else
+            -- For non-grep results, show the whole file
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, preview_content)
+          end
+          
+          -- Set filetype for basic syntax highlighting
+          vim.api.nvim_buf_call(bufnr, function()
+            local ft = vim.filetype.match({ filename = filepath, buf = bufnr }) or "text"
+            vim.bo[bufnr].filetype = ft
+          end)
+        end,
         mappings = {
           i = {
             ["<C-j>"] = actions.move_selection_next,
@@ -72,12 +137,22 @@ return {
           previewer = false,
         },
         live_grep = {
-          -- Use vim previewer instead of treesitter to avoid ft_to_lang error
-          previewer = false,
+          -- Enable floating preview window for live grep with context
+          layout_strategy = "vertical",
+          layout_config = {
+            width = 0.9,
+            height = 0.9,
+            preview_height = 0.6,
+          },
         },
         grep_string = {
-          -- Use vim previewer instead of treesitter to avoid ft_to_lang error
-          previewer = false,
+          -- Enable floating preview window for grep string with context
+          layout_strategy = "vertical", 
+          layout_config = {
+            width = 0.9,
+            height = 0.9,
+            preview_height = 0.6,
+          },
         },
         lsp_definitions = {
           theme = "cursor",

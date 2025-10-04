@@ -36,6 +36,21 @@ return {
 
     -- Setup capabilities for autocompletion
     local capabilities = require("cmp_nvim_lsp").default_capabilities()
+    
+    -- Enhanced capabilities for better hover and documentation
+    capabilities.textDocument.hover = {
+      dynamicRegistration = false,
+      contentFormat = { "markdown", "plaintext" }
+    }
+    capabilities.textDocument.signatureHelp = {
+      dynamicRegistration = false,
+      signatureInformation = {
+        documentationFormat = { "markdown", "plaintext" },
+        parameterInformation = {
+          labelOffsetSupport = true
+        }
+      }
+    }
 
     -- LSP keymaps
     local on_attach = function(client, bufnr)
@@ -48,6 +63,15 @@ return {
       vim.keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<cr>", { buffer = bufnr, desc = "Go to type definition (Telescope)" })
       vim.keymap.set("n", "gr", "<cmd>Telescope lsp_references<cr>", { buffer = bufnr, desc = "Show references (Telescope)" })
       vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover documentation" })
+      vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "Signature help" })
+      
+      -- Enhanced hover with better formatting
+      vim.keymap.set("n", "<leader>k", function()
+        vim.lsp.buf.hover()
+      end, { buffer = bufnr, desc = "Show hover info" })
+      
+      -- Show signature help in insert mode
+      vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { buffer = bufnr, desc = "Signature help (insert)" })
       
       -- TypeScript specific keybindings - only add if command is available
       if client.name == "ts_ls" and client.supports_method("workspace/executeCommand") then
@@ -218,7 +242,71 @@ return {
       float = {
         border = "rounded",
         source = "always",
+        header = "",
+        prefix = "",
       },
+    })
+
+    -- Enhanced LSP handlers for better hover and signature help
+    vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+      border = "rounded",
+      title = " 📚 Documentation ",
+      title_pos = "center",
+      max_width = 100,
+      max_height = 25,
+      wrap = true,
+      focusable = true,
+      close_events = { "BufLeave", "CursorMoved", "InsertEnter" },
+      -- Custom styling
+      style = "minimal",
+    })
+
+    vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+      border = "rounded",
+      title = " ⚡ Signature Help ",
+      title_pos = "center",
+      max_width = 90,
+      max_height = 20,
+      wrap = true,
+      focusable = false,
+      close_events = { "CursorMoved", "BufHidden", "InsertCharPre" },
+      -- Auto-trigger in insert mode
+      trigger_chars = { "(", ",", " " },
+    })
+
+    -- Enhanced completion documentation
+    vim.lsp.handlers["textDocument/completion"] = vim.lsp.with(vim.lsp.handlers.completion, {
+      documentation = {
+        border = "rounded",
+        max_width = 80,
+        max_height = 15,
+        wrap = true,
+      },
+    })
+
+    -- Auto-show signature help when typing function parameters
+    vim.api.nvim_create_autocmd({ "CursorHoldI" }, {
+      group = vim.api.nvim_create_augroup("lsp_signature_help", { clear = true }),
+      callback = function()
+        if not require("cmp").visible() then
+          vim.lsp.buf.signature_help()
+        end
+      end,
+    })
+
+    -- Show hover documentation automatically after a delay
+    vim.api.nvim_create_autocmd({ "CursorHold" }, {
+      group = vim.api.nvim_create_augroup("lsp_hover", { clear = true }),
+      callback = function()
+        local opts = {
+          focusable = false,
+          close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
+          border = "rounded",
+          source = "always",
+          prefix = " ",
+        }
+        vim.diagnostic.open_float(nil, opts)
+      end,
     })
 
     -- Diagnostic signs

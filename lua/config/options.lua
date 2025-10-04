@@ -23,6 +23,16 @@ opt.cursorline = true
 opt.scrolloff = 8
 opt.sidescrolloff = 8
 
+-- LSP and hover behavior
+opt.updatetime = 250        -- Faster hover (default 4000ms)
+opt.timeoutlen = 500        -- Faster key sequence timeout
+opt.completeopt = { "menu", "menuone", "noselect", "preview" }
+
+-- Enhanced completion behavior for better documentation display
+opt.pumheight = 15          -- Completion popup height
+opt.pumwidth = 50          -- Completion popup width
+opt.winblend = 10          -- Slight transparency for floating windows
+
 -- Hide command line and ruler for minimal UI
 opt.cmdheight = 0       -- Hide command line
 opt.ruler = false       -- Hide line/column info
