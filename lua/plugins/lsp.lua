@@ -49,13 +49,27 @@ return {
       vim.keymap.set("n", "gr", "<cmd>Telescope lsp_references<cr>", { buffer = bufnr, desc = "Show references (Telescope)" })
       vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover documentation" })
       
-      -- TypeScript specific keybindings
-      if client.name == "ts_ls" then
+      -- TypeScript specific keybindings - only add if command is available
+      if client.name == "ts_ls" and client.supports_method("workspace/executeCommand") then
         vim.keymap.set("n", "<leader>oi", function()
-          vim.lsp.buf.execute_command({
-            command = "_typescript.organizeImports",
-            arguments = { vim.api.nvim_buf_get_name(0) },
-          })
+          -- Check if the command is available before executing
+          local commands = client.server_capabilities.executeCommandProvider and client.server_capabilities.executeCommandProvider.commands or {}
+          local has_organize_imports = false
+          for _, cmd in ipairs(commands) do
+            if cmd == "_typescript.organizeImports" then
+              has_organize_imports = true
+              break
+            end
+          end
+          
+          if has_organize_imports then
+            vim.lsp.buf.execute_command({
+              command = "_typescript.organizeImports",
+              arguments = { vim.api.nvim_buf_get_name(0) },
+            })
+          else
+            vim.notify("Organize imports command not available", vim.log.levels.WARN)
+          end
         end, { buffer = bufnr, desc = "Organize imports" })
       end
       
@@ -118,24 +132,10 @@ return {
       },
     })
 
-    -- TypeScript
+    -- TypeScript - Remove auto organize imports on save to prevent errors
     lspconfig.ts_ls.setup({
       capabilities = capabilities,
-      on_attach = function(client, bufnr)
-        on_attach(client, bufnr)
-        
-        -- Organize imports on save for TypeScript
-        vim.api.nvim_create_autocmd("BufWritePre", {
-          buffer = bufnr,
-          callback = function()
-            local params = {
-              command = "_typescript.organizeImports",
-              arguments = { vim.api.nvim_buf_get_name(0) },
-            }
-            vim.lsp.buf.execute_command(params)
-          end,
-        })
-      end,
+      on_attach = on_attach,
       settings = {
         typescript = {
           preferences = {
@@ -146,17 +146,6 @@ return {
           preferences = {
             includePackageJsonAutoImports = "auto",
           },
-        },
-      },
-      commands = {
-        OrganizeImports = {
-          function()
-            vim.lsp.buf.execute_command({
-              command = "_typescript.organizeImports",
-              arguments = { vim.api.nvim_buf_get_name(0) },
-            })
-          end,
-          description = "Organize Imports",
         },
       },
     })
